@@ -14,8 +14,8 @@ RED/GREEN evidence, and release archival depend primarily on an agent following
 Markdown instructions correctly.
 
 The repository is a template rather than an application. It contains no
-solution, frontend project, CI workflow, validator, or Git history, so the
-implementation quality gates could not be executed during this audit.
+solution, frontend project, CI workflow, or validator, so the implementation
+quality gates could not be executed during this audit.
 
 ## Findings
 
@@ -48,6 +48,78 @@ Manual status edits and malformed relationships cannot be detected reliably.
 **Recommendation:** Add a repository-local validator that checks frontmatter,
 IDs, transitions, prerequisites, cross-references, placeholders, and packet
 readiness. Run it locally and in CI.
+
+**Resolution Plan: Deterministic Python CLI Gatekeeper**
+
+A small, non-AI Python CLI is an appropriate executable implementation of this
+policy. It should be independent of the product runtime, deterministic, usable
+offline, and called by both the workflow skills and CI.
+
+Suggested command surface:
+
+```text
+sdd validate --all --strict
+sdd validate specs/001-feature/
+sdd check-ready specs/001-feature/
+sdd promote <artifact-or-packet> --to <state> --actor <name>
+sdd allocate-id <prefix>
+```
+
+The CLI should validate:
+
+- Frontmatter schema, required fields, artifact types, and status values.
+- ID format, uniqueness, allocation, and collisions across active, archived,
+  and superseded artifacts.
+- Parent, epic, dependency, and cross-reference integrity.
+- Allowed transitions by artifact type, including rework, supersession,
+  implementation, release, archival, and observation states.
+- Placeholder values, unresolved blockers, and the complete Spec-Ready
+  Predicate.
+- Approval metadata, schema/table bidirectional links, and verification
+  evidence.
+
+`promote` should be the only supported status-mutating command. Authoring skills
+should create drafts and invoke this command rather than editing lifecycle
+fields. `spec-ready` should be implemented as the read-only result of
+`check-ready`, not as a persisted status, resolving C-01.
+
+The CLI alone cannot prevent a direct Markdown edit. Enforcement requires
+`sdd validate --all --strict` to run in CI on every pull request, with GitHub
+branch protection requiring that check to pass. Protect the validator and its
+transition definitions with code ownership and review. This makes the CLI the
+single policy authority while CI becomes the enforcement boundary.
+
+The CLI cannot judge whether a product decision is semantically correct, whether
+a human genuinely approved it, or whether a test is meaningful. Those remain
+human-review and test-execution responsibilities. The CLI should validate their
+required records and evidence, not pretend to replace them.
+
+Suggested implementation layout:
+
+```text
+tools/sdd/
+  pyproject.toml
+  sdd/
+    cli.py
+    models.py
+    parser.py
+    schema.py
+    state_machine.py
+    validator.py
+  tests/
+    fixtures/
+```
+
+Acceptance criteria for resolving C-02:
+
+- Invalid artifacts and invalid transitions return non-zero exit codes with
+  actionable diagnostics.
+- Valid packets pass `sdd check-ready` only when every readiness condition is
+  satisfied.
+- Promotions are atomic, collision-safe, and record approval metadata.
+- Direct status edits that do not satisfy the transition rules fail CI.
+- The CLI has fixture tests for every artifact type and transition.
+- CI runs the same validator used locally, with no AI dependency.
 
 ### High
 
@@ -301,8 +373,9 @@ privileged operations.
 
 - No `.sln`, `.csproj`, `package.json`, CI workflow, coverage configuration, or
   project gate wrapper exists in this repository.
-- The repository is not currently a Git repository, so release commit evidence
-  and archival behavior could not be exercised.
+- The repository now has an initial Git commit, but no release history or
+  application implementation exists, so release commit evidence and archival
+  behavior could not be exercised.
 - No active PRD or feature packet exists, so end-to-end promotion and traceability
   remain untested.
 
