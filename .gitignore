@@ -1,0 +1,28 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+TestResults/
+coverage.cobertura.xml
+
+# Node / SPA
+node_modules/
+Web.Spa/dist/
+Web.Spa/coverage/
+Web.Spa/playwright-report/
+Web.Spa/test-results/
+
+# OS / editor
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# dotnet run generated
+*.log
+
+# Runtime state
+App_Data/
+
+# Local tool state
+.qmd/
