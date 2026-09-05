@@ -41,6 +41,39 @@ Authoring skills create drafts only. Never edit lifecycle status by hand.
 Stop and ask when a product, domain, dependency, behavior, or technical
 question blocks progress. Do not invent missing requirements.
 
+## Agent Topology
+
+> Informational. `specs/SDD_WORKFLOW.md` (lifecycle) and `specs/adr/ADR-005.md`
+> (topology decision) are authoritative; this section summarizes.
+
+The workflow runs as an orchestrator-plus-stage-subagent topology under
+`.opencode/agents/`, driven by gate clusters (human confirmation at every
+cluster boundary):
+
+| Cluster | Stage subagent(s) | Mapped skills |
+| --- | --- | --- |
+| 1. Product intent | `sdd-product` | `create-prd`, `refine-epic` |
+| 2. Story & behavior | `sdd-story` | `refine-user-stories`, `user-story-to-gherkin` |
+| 3. Contract & plan | `sdd-contract`, then `sdd-reviewer` | `create-requirements`, `create-design`, `create-tasks`; spec-ready validation |
+| 4. Build & verify | `sdd-implementer`, then `sdd-verifier` | `implement-feature`, `verify-feature` |
+| 5. Release | `sdd-releaser` | `record-release`, `triage-observation` |
+
+Rules that hold across the topology:
+
+- `sdd-orchestrator` (primary agent) delegates stage work, gates each cluster
+  with the human, and owns every `promote-artifact` invocation. Subagents
+  never advance lifecycle statuses.
+- Subagents are thin wrappers that invoke their mapped skills; skills remain
+  the single source of process truth. `§Skill Mapping` conformance is
+  unchanged.
+- The packet on disk is the handoff; each subagent works in its own context
+  and reads only what its stage needs.
+- Blocking questions are relayed to the human, never answered by agents.
+
+Running the workflow single-agent (loading each skill yourself in one
+session) remains conformant; the topology is an orchestration layer, not a
+new lifecycle.
+
 ## Engineering Summary
 
 - .NET work follows `specs/CONSTITUTION.md`.
